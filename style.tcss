@@ -1,0 +1,69 @@
+VerticalScroll {
+    align: center middle;
+    height: 1fr;
+}
+Horizontal {
+    align: center top;
+    height: auto;
+}
+Input {
+    border: tall $primary 60%;
+}
+Input.-valid {
+    border: tall $success 60%;
+}
+Input.-valid:focus {
+    border: tall $success;
+}
+Input {
+    margin: 1 1;
+}
+ListView {
+    align: center top;
+}
+Pretty {
+    margin: 1 2;
+}
+Rule {
+    margin: 0 1 0 1;
+}
+Log {
+    width: 1fr;
+}
+#bar {
+    width: 1fr;
+}
+.w-fr5{
+    width: 5fr;
+}
+.w-frame{
+    width: 1fr;
+}
+.m1-2 {
+    margin: 1 2 1 2;
+}
+.mx-2 {
+    margin: 0 2;
+}
+
+.mx-1 {
+    margin: 0 1;
+}
+
+#chapters_count {
+    width: 100%;
+    margin: 1 0 1 0;
+}
+
+.w-full {
+    width: 100%;
+}
+.aling-center-middle {
+    align: center middle;
+}
+.aling-center-top {
+    align: center top;
+}
+.height-28 {
+    height: 28;
+}
