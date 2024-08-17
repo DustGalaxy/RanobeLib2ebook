@@ -21,4 +21,4 @@ if __name__ == "__main__":
         print("Произошла непредвиденная ошибка.\nПодробности в файле: " + full_path)
         print("\n" + ("-" * 60) + "\n", file=open(full_path, "a"))
         traceback.print_exc(file=open(full_path, "a"))
-        input("Нажмите Enter для выхода...")
+    input("Нажмите Enter для выхода...")

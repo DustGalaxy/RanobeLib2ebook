@@ -56,10 +56,7 @@ class FB2Handler(Handler):
         self.log_func(f"Книга {self.book.titleInfo.title} сохранена в формате FB2!")
         self.log_func(f"В каталоге {dir} создана книга {save_title}.fb2")
 
-    def _make_chapter(
-        self, slug: str, priority_branch: str, item: ChapterMeta, delay: float
-    ) -> list[ET.Element] | None:
-        time.sleep(delay)
+    def _make_chapter(self, slug: str, priority_branch: str, item: ChapterMeta) -> list[ET.Element] | None:
         try:
             chapter: ChapterData = get_chapter(
                 slug,
@@ -94,6 +91,7 @@ class FB2Handler(Handler):
         slug: str,
         priority_branch: str,
         chapters_data: list[ChapterMeta],
+        worker,
         delay: float = 0.5,
     ) -> None:
         self.min_volume = str(chapters_data[0].volume)
@@ -106,7 +104,11 @@ class FB2Handler(Handler):
         self.log_func(f"Начинаем скачивать главы: {len(chapters_data)}")
 
         for i, item in enumerate(chapters_data, 1):
-            tags: list[ET.Element] | None = self._make_chapter(slug, priority_branch, item, delay)
+            time.sleep(delay)
+            if worker.is_cancelled:
+                break
+
+            tags: list[ET.Element] | None = self._make_chapter(slug, priority_branch, item)
 
             if tags is None:
                 self.log_func("Пропускаем главу.")

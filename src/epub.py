@@ -75,10 +75,8 @@ class EpubHandler(Handler):
         return tags, images
 
     def _make_chapter(
-        self, slug: str, priority_branch: str, item: ChapterMeta, delay: float
+        self, slug: str, priority_branch: str, item: ChapterMeta
     ) -> tuple[epub.EpubHtml, dict[str, Image]]:
-        time.sleep(delay)
-
         try:
             chapter: ChapterData = get_chapter(
                 slug,
@@ -140,6 +138,7 @@ class EpubHandler(Handler):
         name: str,
         priority_branch: str,
         chapters_data: list[ChapterMeta],
+        worker,
         delay: float = 0.5,
     ) -> None:
         self.min_volume = str(chapters_data[0].volume)
@@ -152,7 +151,11 @@ class EpubHandler(Handler):
         self.log_func(f"\nНачинаем скачивать главы: {len(chapters_data)}")
 
         for i, item in enumerate(chapters_data, 1):
-            epub_chapter, images = self._make_chapter(name, priority_branch, item, delay)
+            time.sleep(delay)
+            if worker.is_cancelled:
+                break
+
+            epub_chapter, images = self._make_chapter(name, priority_branch, item)
             if epub_chapter is None:
                 self.log_func("Пропускаем главу.")
                 continue

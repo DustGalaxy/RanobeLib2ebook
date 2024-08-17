@@ -67,7 +67,9 @@ class Handler(ABC):
         self.progress_bar_step = progress_bar_step
 
     @abstractmethod
-    def fill_book(self, slug: str, priority_branch: str, chapters_data: list[ChapterMeta]) -> None:
+    def fill_book(
+        self, slug: str, priority_branch: str, chapters_data: list[ChapterMeta], worker, delay: float = 0.5
+    ) -> None:
         pass
 
     @abstractmethod

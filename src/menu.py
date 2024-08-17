@@ -1,7 +1,5 @@
-import dis
 import os
 import re
-import time
 from pathlib import Path
 from typing import Literal
 from urllib import parse
@@ -9,11 +7,10 @@ from urllib.parse import urlparse
 
 from textual import on, work
 from textual.app import App, ComposeResult
-from textual.color import Gradient
 from textual.validation import Function
 from textual.binding import Binding
-from textual.containers import Horizontal, VerticalScroll, Vertical, Container
-from textual.worker import Worker
+from textual.containers import Horizontal, VerticalScroll, Vertical
+from textual.worker import Worker, get_current_worker
 from textual.widgets import (
     Footer,
     Header,
@@ -26,7 +23,6 @@ from textual.widgets import (
     Select,
     ProgressBar,
     Log,
-    Placeholder,
 )
 
 from textual_fspicker import SelectDirectory
@@ -102,7 +98,7 @@ class Ranobe2ebook(App):
                     variant="success",
                     classes="w-frame",
                 )
-                # yield Button("Выход", id="stop_and_save", variant="error", classes="w-frame")
+                yield Button("Отстановить и сохранить", id="stop_and_save", variant="error", classes="w-frame")
             yield ProgressBar(
                 id="download_progress",
                 show_eta=False,
@@ -330,8 +326,9 @@ class Ranobe2ebook(App):
     async def fill_ebook_worker(self) -> None:
         log: Log = self.query_one("#log")
         try:
+            worker = get_current_worker()
             self.ebook.fill_book(
-                self.slug, self.priority_branch, self.chapters_data[self.start : self.start + self.amount]
+                self.slug, self.priority_branch, self.chapters_data[self.start : self.start + self.amount], worker
             )
 
         except Exception as e:
@@ -389,8 +386,9 @@ class Ranobe2ebook(App):
 
     @on(Button.Pressed, "#stop_and_save")
     def app_exit(self, event: Button.Pressed) -> None:
-        # self.end_ebook_worker()  # TODO: сделать как пофиксят библеотеку
-        self.app.exit()
+        self.end_ebook_worker()  # TODO: сделать как пофиксят библеотеку
+
+        # self.app.exit()
 
     @on(Select.Changed, "#branch_list")
     def select_branch(self, event: Select.Changed) -> None:
