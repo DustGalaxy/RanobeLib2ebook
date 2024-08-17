@@ -79,5 +79,9 @@ class Handler(ABC):
         pass
 
     @abstractmethod
+    def end_book(self) -> None:
+        pass
+
+    @abstractmethod
     def save_book(self, dir: str) -> None:
         pass

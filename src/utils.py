@@ -2,6 +2,16 @@ import re
 
 from FB2 import Author
 
+from urllib.parse import urlparse
+
+
+def is_url(url) -> bool:
+    try:
+        result = urlparse(url)
+        return all([result.scheme, result.netloc])
+    except ValueError:
+        return False
+
 
 def set_authors(authors) -> list:
     result_list = []

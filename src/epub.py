@@ -14,6 +14,8 @@ class EpubHandler(Handler):
     book: epub.EpubBook
     log_func: Callable
     progress_bar_step: Callable
+    min_volume: str
+    max_volume: str
 
     def _parse_html(self, chapter: ChapterData) -> tuple[list[str], dict[str, Image]]:
         try:
@@ -73,14 +75,20 @@ class EpubHandler(Handler):
         return tags, images
 
     def _make_chapter(
-        self, name: str, priority_branch: str, item: ChapterMeta
+        self, slug: str, priority_branch: str, item: ChapterMeta, delay: float
     ) -> tuple[epub.EpubHtml, dict[str, Image]]:
-        chapter: ChapterData = get_chapter(
-            name,
-            priority_branch,
-            item.number,
-            item.volume,
-        )
+        time.sleep(delay)
+
+        try:
+            chapter: ChapterData = get_chapter(
+                slug,
+                priority_branch,
+                item.number,
+                item.volume,
+            )
+        except Exception as e:
+            self.log_func(str(e))
+            return None, None
 
         chapter_title = f"Том {item.volume}. Глава {item.number}. {item.name}"
 
@@ -100,57 +108,19 @@ class EpubHandler(Handler):
                 f"<h1>{chapter_title}</h1>" + "".join([tag for tag in tags]),
             )
         else:
-            self.log_func("Неизвестный тип главы! Невозможно преобразовать в FB2!")
+            self.log_func("Неизвестный тип главы! Невозможно преобразовать в EPUB!")
             return None, None
 
         return epub_chapter, images
 
-    async def save_book(self, dir: str) -> None:
+    def save_book(self, dir: str) -> None:
         safe_title = self.book.title.replace(":", "")
         epub.write_epub(f"{dir}\\{safe_title}.epub", self.book)
         self.log_func(f"Книга {self.book.title} сохранена в формате Epub.")
         self.log_func(f"В каталоге {dir} создана книга {safe_title}.epub.")
 
-    async def fill_book(
-        self,
-        name: str,
-        priority_branch: str,
-        chapters_data: list[ChapterMeta],
-        delay: float = 0.5,
-    ) -> None:
-        min_volume = str(chapters_data[0].volume)
-        max_volume = str(chapters_data[-1].volume)
-
-        total_len = len(str(len(chapters_data)))
-        chap_len = len(str(max(chapters_data, key=lambda x: len(str(x.number))).number))
-        volume_len = len(max_volume)
-
-        self.log_func(f"\nНачинаем скачивать главы: {len(chapters_data)}")
-
-        for i, item in enumerate(chapters_data, 1):
-            time.sleep(delay)
-            epub_chapter, images = self._make_chapter(name, priority_branch, item)
-            if epub_chapter is None:
-                continue
-
-            self.book.add_item(epub_chapter)
-            for img in images.values():
-                self.book.add_item(
-                    epub.EpubImage(
-                        uid=img.name,
-                        file_name=img.static_url,
-                        media_type=img.media_type,
-                        content=get_image_content(img.url, img.extension),
-                    )
-                )
-
-            self.log_func(
-                f"Скачали {i:>{total_len}}: Том {item.volume:>{volume_len}}. Глава {item.number:>{chap_len}}. {item.name}"
-            )
-
-            self.progress_bar_step(1)
-
-        self.book.toc = (epub.Section("2131"),) + tuple(
+    def end_book(self) -> None:
+        self.book.toc = (epub.Section("1"),) + tuple(
             chap for chap in self.book.items if isinstance(chap, epub.EpubHtml)
         )
 
@@ -162,10 +132,53 @@ class EpubHandler(Handler):
             None,
             "meta",
             "",
-            {"name": "series_index", "content": f"Тома c {min_volume} по {max_volume}"},
+            {"name": "series_index", "content": f"Тома c {self.min_volume} по {self.max_volume}"},
         )
 
-    async def make_book(self, ranobe_data: dict) -> None:
+    def fill_book(
+        self,
+        name: str,
+        priority_branch: str,
+        chapters_data: list[ChapterMeta],
+        delay: float = 0.5,
+    ) -> None:
+        self.min_volume = str(chapters_data[0].volume)
+        self.max_volume = str(chapters_data[-1].volume)
+
+        total_len = len(str(len(chapters_data)))
+        chap_len = len(str(max(chapters_data, key=lambda x: len(str(x.number))).number))
+        volume_len = len(self.max_volume)
+
+        self.log_func(f"\nНачинаем скачивать главы: {len(chapters_data)}")
+
+        for i, item in enumerate(chapters_data, 1):
+            epub_chapter, images = self._make_chapter(name, priority_branch, item, delay)
+            if epub_chapter is None:
+                self.log_func("Пропускаем главу.")
+                continue
+
+            self.book.add_item(epub_chapter)
+            for img in images.values():
+                try:
+                    self.book.add_item(
+                        epub.EpubImage(
+                            uid=img.name,
+                            file_name=img.static_url,
+                            media_type=img.media_type,
+                            content=get_image_content(img.url, img.extension),
+                        )
+                    )
+                except Exception as e:
+                    self.log_func(str(e))
+                    continue
+
+            self.log_func(
+                f"Скачали {i:>{total_len}}: Том {item.volume:>{volume_len}}. Глава {item.number:>{chap_len}}. {item.name}"
+            )
+
+            self.progress_bar_step(1)
+
+    def make_book(self, ranobe_data: dict) -> None:
         self.log_func("\nПодготавливаем книгу...")
 
         title = ranobe_data.get("rus_name") if ranobe_data.get("rus_name") else ranobe_data.get("name")

@@ -4,10 +4,9 @@ from PIL import Image
 import PIL
 import cloudscraper
 import requests
-from icecream import ic
 
 from src.model import Attachment, ChapterData, ChapterMeta
-from src.utils import is_html
+from src.utils import is_html, is_url
 
 
 def get_branchs(id: str) -> dict:
@@ -66,6 +65,10 @@ def get_image_content(url: str, format: str) -> bytes:
         )
         if format.upper() == "JPG":
             format = "JPEG"
+
+        if not is_url(url):
+            return b""
+
         response = scraper.get(url)
 
         match response.status_code:
@@ -77,24 +80,28 @@ def get_image_content(url: str, format: str) -> bytes:
                         return io_buf.read()
 
             case 404:
-                print(f"Error {response.status_code}: {response.reason}. {url=}")
-                print("Картинка не найдена по ссылке в API. Пропускаем картинку.")
+                raise Exception(
+                    f"Error {response.status_code}: {response.reason}. {url=} \nКартинка не найдена по ссылке в API. Пропускаем картинку."
+                )
 
             case _:
-                print(f"Error {response.status_code}: {response.reason}. {url=}")
-                print("Не удалось получить картинку. Пропускаем картинку.")
+                raise Exception(
+                    f"Error {response.status_code}: {response.reason}. {url=} \nНе удалось получить картинку. Пропускаем картинку."
+                )
 
     except PIL.UnidentifiedImageError:
-        print("Что то не так с картинкой. Пропускаем картинку.")
+        raise Exception("Что то не так с картинкой. Пропускаем картинку.")
+
+    except Exception as e:
+        raise Exception(e)
 
 
 def get_chapter(name: str, priority_branch: str, number: int, volume: int) -> ChapterData:
     url = f"https://api.lib.social/api/manga/{name}/chapter?branch_id={priority_branch}&number={number}&volume={volume}"
     response = requests.get(url)
     if response.status_code != 200:
-        print(f"Ошибка при получении главы {volume} - {number}. Пропускаем главу {volume} - {number}")
-        ic(response.json())
-        raise
+        raise Exception(f"Ошибка при получении главы {volume} - {number}. Пропускаем главу {volume} - {number}")
+
     else:
         data = response.json().get("data")
 

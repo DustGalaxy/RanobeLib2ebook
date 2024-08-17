@@ -36,6 +36,9 @@ Log {
 .w-fr5{
     width: 5fr;
 }
+.w-8{
+    width: 8;
+}
 .w-frame{
     width: 1fr;
 }
@@ -45,7 +48,18 @@ Log {
 .mx-2 {
     margin: 0 2;
 }
-
+.mb-1 {
+    margin: 0 0 1 0;
+}
+.px-3 {
+    padding: 0 3;
+}
+.mx-0-2 {
+    margin: 0 0 0 2;
+}
+.mx-1-0 {
+    margin: 0 1 0 0;
+}
 .mx-1 {
     margin: 0 1;
 }
@@ -53,6 +67,10 @@ Log {
 #chapters_count {
     width: 100%;
     margin: 1 0 1 0;
+}
+
+#settings {
+    width: 44;
 }
 
 .w-full {
@@ -64,6 +82,6 @@ Log {
 .aling-center-top {
     align: center top;
 }
-.height-28 {
-    height: 28;
+.main-vertical-height {
+    height: 34;
 }

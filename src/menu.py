@@ -1,5 +1,7 @@
+import dis
 import os
 import re
+import time
 from pathlib import Path
 from typing import Literal
 from urllib import parse
@@ -9,7 +11,9 @@ from textual import on, work
 from textual.app import App, ComposeResult
 from textual.color import Gradient
 from textual.validation import Function
-from textual.containers import Horizontal, VerticalScroll, Vertical
+from textual.binding import Binding
+from textual.containers import Horizontal, VerticalScroll, Vertical, Container
+from textual.worker import Worker
 from textual.widgets import (
     Footer,
     Header,
@@ -22,6 +26,7 @@ from textual.widgets import (
     Select,
     ProgressBar,
     Log,
+    Placeholder,
 )
 
 from textual_fspicker import SelectDirectory
@@ -48,6 +53,7 @@ class Ranobe2ebook(App):
     start: int
     amount: int
     state: State = State()
+    ebook: Handler = None
 
     def __init__(
         self,
@@ -56,6 +62,10 @@ class Ranobe2ebook(App):
     ) -> None:
         super().__init__()
         self.handlers = handlers
+
+    BINDINGS = [
+        Binding(key="ctrl+q", action="quit", key_display="ctrl + q", description="Выйти"),
+    ]
 
     def dev_print(self, text: str) -> None:
         # self.query_one("#dev_label").update(text)
@@ -66,29 +76,30 @@ class Ranobe2ebook(App):
 
     def compose(self) -> ComposeResult:
         gradient = Gradient.from_colors(
-            "#881177",
             "#aa3355",
-            "#cc6666",
-            "#ee9944",
-            "#eedd00",
-            "#99dd55",
-            "#44dd88",
-            "#22ccbb",
-            "#00bbcc",
-            "#0099cc",
-            "#3366bb",
-            "#663399",
+            "#aa3355",
+            # "#aa3355",
+            # "#cc6666",
+            # "#ee9944",
+            # "#eedd00",
+            # "#99dd55",
+            # "#44dd88",
+            # "#22ccbb",
+            # "#00bbcc",
+            # "#0099cc",
+            # "#3366bb",
+            # "#663399",
         )
         yield Header(show_clock=True, name="RanobeLIB 2 ebook")
         yield Footer()
         with Vertical():
-            yield Label(title)
+            # yield Label(title)
             yield Input(
                 id="input_link",
                 placeholder="Сcылка на ранобе. Пример: https://ranobelib.me/ru/book/165329--kusuriya-no-hitorigoto-ln-novel",
-                validators=[Function(is_valid_url, "Invalid link!")],
+                validators=[Function(is_valid_url, "Неправильная ссылка!")],
             )
-            yield Label("", id="url_errors", classes="w-full m1-2")
+            # yield Label("", id="url_errors", classes="w-full m1-2")
             with Horizontal(classes="m1-2"):
                 yield Button(
                     "Проверка ссылки",
@@ -104,86 +115,84 @@ class Ranobe2ebook(App):
                     variant="success",
                     classes="w-frame",
                 )
-                yield Button("Выход", id="exit", variant="error", classes="w-frame")
-            yield Rule(line_style="heavy")
-            with Horizontal():
-                with Vertical():
-                    yield Select(
-                        (),
-                        prompt="Выбрать приоритетную ветку перевода",
-                        id="branch_list",
-                        classes="w-full m1-2",
-                    )
-                    yield Label("", id="dev_label", classes="w-full m1-2")
-                    with RadioSet(id="format", name="format", classes="w-full m1-2"):
-                        yield Label("Формат")
-                        yield Rule(line_style="heavy")
-                        yield RadioButton("EPUB с картинками 📝 + 🖼", name="epub", value=True)
-                        yield RadioButton("FB2 без картинок 📝", name="fb2")
-                    with RadioSet(id="save_dir", classes="w-full m1-2"):
-                        yield Label("Сохранить в папку")
-                        yield Rule(line_style="heavy")
-                        yield RadioButton("Робочий стол", name="desktop", value=True)
-                        yield RadioButton("Документы", name="documents")
-                        yield RadioButton("Текущая папка", name="current_folder")
-                        yield RadioButton("Другая папка", name="other_folder")
-                        yield Input(
-                            placeholder="Путь в папке",
-                            id="input_save_dir",
-                            disabled=True,
-                            validators=[Function(os.path.isdir, "Invalid directory!")],
+                # yield Button("Выход", id="stop_and_save", variant="error", classes="w-frame")
+            yield ProgressBar(
+                id="download_progress",
+                gradient=gradient,
+                show_eta=False,
+                classes="w-full px-3",
+            )
+            # yield Rule(line_style="heavy", classes="mx-0-2")
+            with VerticalScroll():
+                with Horizontal():
+                    with Vertical(id="settings", classes=" m1-2"):
+                        yield Select(
+                            (),
+                            prompt="Выбрать приоритетную ветку перевода",
+                            id="branch_list",
+                            classes="w-full mb-1",
                         )
-                        yield Label("", id="dir_errors", classes="w-frame mx-2")
+                        yield Label("", id="dev_label", classes="w-full mb-1")
+                        with RadioSet(id="format", name="format", classes="w-full mb-1"):
+                            yield Label("Формат")
+                            yield Rule(line_style="heavy")
+                            yield RadioButton("EPUB с картинками 📝 + 🖼", name="epub", value=True)
+                            yield RadioButton("FB2 без картинок 📝", name="fb2")
+                        with RadioSet(id="save_dir", classes="w-full mb-1"):
+                            yield Label("Сохранить в папку")
+                            yield Rule(line_style="heavy")
+                            yield RadioButton("Робочий стол", name="desktop", value=True)
+                            yield RadioButton("Документы", name="documents")
+                            yield RadioButton("Текущая папка", name="current_folder")
+                            yield RadioButton("Другая папка", name="other_folder")
+                            yield Input(
+                                placeholder="Путь в папке",
+                                id="input_save_dir",
+                                disabled=True,
+                                validators=[Function(os.path.isdir, "Invalid directory!")],
+                            )
+                            # yield Label("", id="dir_errors", classes="w-frame mx-2")
 
-                yield Rule(orientation="vertical", line_style="heavy", classes="height-28")
-                with VerticalScroll(classes="height-28 mx-1"):
-                    with Horizontal(classes=""):
-                        yield Input(
-                            id="input_start",
-                            placeholder="C",
-                            type="integer",
-                            disabled=True,
-                            classes="w-frame",
-                        )
-                        yield Input(
-                            id="input_end",
-                            placeholder="Кол-во",
-                            type="integer",
-                            disabled=True,
-                            classes="w-frame",
-                        )
-                    yield Label("", id="chapters_count", classes="w-full m1-2")
-                    yield ProgressBar(
-                        id="download_progress",
-                        gradient=gradient,
-                        show_eta=False,
-                        classes="w-full",
-                    )
-                    yield Log(id="log")
-                    yield Log(
-                        id="chapter_list",
-                        auto_scroll=False,
-                    )
+                    # yield Rule(orientation="vertical", line_style="heavy", classes="height-28")
+                    with Vertical(classes="main-vertical-height w-frame"):
+                        with Horizontal(classes=""):
+                            yield Input(
+                                id="input_start",
+                                placeholder="C",
+                                type="integer",
+                                disabled=True,
+                                classes="w-frame",
+                            )
+                            yield Input(
+                                id="input_end",
+                                placeholder="Кол-во",
+                                type="integer",
+                                disabled=True,
+                                classes="w-frame",
+                            )
+                        yield Label("", id="chapters_count", classes="w-full m1-2")
 
-    def on_ready(self) -> None:
-        pass
+                        yield Log(id="log")
+                        yield Log(
+                            id="chapter_list",
+                            auto_scroll=False,
+                        )
 
     @on(Input.Changed, "#input_link")
     def show_invalid_reasons(self, event: Input.Changed) -> None:
         if not event.validation_result.is_valid:
-            self.query_one("#url_errors").update("Неправильная ссылка!")
+            self.notify("Неправильная ссылка", severity="error", timeout=2)
             self.query_one("#check_link").disabled = True
         else:
-            self.query_one("#url_errors").update("")
+            # self.query_one("#url_errors").update("")
             self.query_one("#check_link").disabled = False
 
     @on(Input.Changed, "#input_save_dir")
     def show_dir(self, event: Input.Changed) -> None:
         if not event.validation_result.is_valid:
-            self.query_one("#dir_errors").update("Неправильный путь!")
+            self.notify("Неправильный путь", severity="error", timeout=2)
             self.state.is_dir_selected = False
         else:
-            self.query_one("#dir_errors").update("")
             self.dir = event.value
             self.state.is_dir_selected = True
 
@@ -291,7 +300,7 @@ class Ranobe2ebook(App):
 
         self.query_one("#chapter_list").write_lines(
             [
-                f"{i:>{total_len}}: Vol {chapter.volume:>{volume_len}}. Chap {chapter.number:>{chap_len}}. {chapter.name}"
+                f"{i:>{total_len}}: Том {chapter.volume:>{volume_len}}. Глава {chapter.number:>{chap_len}}. {chapter.name}"
                 for i, chapter in enumerate(self.chapters_data, 1)
             ]
         )
@@ -308,8 +317,8 @@ class Ranobe2ebook(App):
         self.query_one("#input_start").disabled = False
         self.query_one("#input_end").disabled = False
 
-    @work(exclusive=True, thread=True)
-    async def ebook_worker(self) -> None:
+    @work(name="make_ebook_worker", exclusive=True, thread=True)
+    async def make_ebook_worker(self) -> None:
         log: Log = self.query_one("#log")
         p_bar: ProgressBar = self.query_one("#download_progress")
 
@@ -317,17 +326,69 @@ class Ranobe2ebook(App):
 
         Handler_: Handler = self.handlers[format]
 
-        ebook = Handler_(log_func=log.write_line, progress_bar_step=p_bar.advance)
-        await ebook.make_book(self.ranobe_data)
-        await ebook.fill_book(
-            self.slug, self.priority_branch, self.chapters_data[self.start : self.start + self.amount]
-        )
-        log.write_line("\nСохраняем книгу...")
-        await ebook.save_book(self.dir)
+        self.ebook = Handler_(log_func=log.write_line, progress_bar_step=p_bar.advance)
+
+        try:
+            self.ebook.make_book(self.ranobe_data)
+
+        except Exception as e:
+            log.write_line(str(e))
+
+    @work(name="fill_ebook_worker", exclusive=True, thread=True)
+    async def fill_ebook_worker(self) -> None:
+        log: Log = self.query_one("#log")
+
+        # for i in range(self.start, self.start + self.amount):
+        #     time.sleep(0.5)
+        #     log.write_line(str(i))
+
+        try:
+            self.ebook.fill_book(
+                self.slug, self.priority_branch, self.chapters_data[self.start : self.start + self.amount]
+            )
+
+        except Exception as e:
+            log.write_line(str(e))
+
+    @work(name="end_ebook_worker", exclusive=True, thread=True)
+    async def end_ebook_worker(self) -> None:
+        log: Log = self.query_one("#log")
+
+        try:
+            self.ebook.end_book()
+
+        except Exception as e:
+            log.write_line(str(e))
+
+    @work(name="save_ebook_worker", exclusive=True, thread=True)
+    async def save_ebook_worker(self) -> None:
+        log: Log = self.query_one("#log")
+
+        try:
+            log.write_line("\nСохраняем книгу...")
+            self.ebook.save_book(self.dir)
+        except Exception as e:
+            log.write_line(str(e))
         self.query_one("#check_link").disabled = False
 
+    @on(Worker.StateChanged)
+    def worker_manage(self, event: Worker.StateChanged) -> None:
+        match event.worker.name:
+            case "make_ebook_worker":
+                match event.state.name:
+                    case "SUCCESS":
+                        self.fill_ebook_worker()
+            case "fill_ebook_worker":
+                match event.state.name:
+                    case "SUCCESS" | "CANCELLED" | "ERROR":
+                        self.end_ebook_worker()
+            case "end_ebook_worker":
+                match event.state.name:
+                    case "SUCCESS":
+                        self.save_ebook_worker()
+
     @on(Button.Pressed, "#download")
-    async def download(self, event: Button.Pressed) -> None:
+    def download(self, event: Button.Pressed) -> None:
         if self.is_ready_download() and self.dir:
             self.dev_print("Download")
             self.query_one("#download").disabled = True
@@ -335,12 +396,13 @@ class Ranobe2ebook(App):
             self.query_one("#input_start").disabled = True
             self.query_one("#input_end").disabled = True
 
-            self.ebook_worker()
+            self.make_ebook_worker()
         else:
             self.dev_print(str([(i, j) for i, j in self.state.__dict__.items()]))
 
-    @on(Button.Pressed, "#exit")
+    @on(Button.Pressed, "#stop_and_save")
     def app_exit(self, event: Button.Pressed) -> None:
+        # self.end_ebook_worker()  # TODO: сделать как пофиксят библеотеку
         self.app.exit()
 
     @on(Select.Changed, "#branch_list")
@@ -362,7 +424,7 @@ class Ranobe2ebook(App):
 
             case "save_dir":
                 self.dev_print(event.radio_set.pressed_button.label)
-                self.query_one("#dir_errors").update("")
+                # self.query_one("#dir_errors").update("")
                 self.query_one("#input_save_dir").disabled = True
                 match event.radio_set.pressed_button.name:
                     case "desktop":
