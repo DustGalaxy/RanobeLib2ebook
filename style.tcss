@@ -70,7 +70,7 @@ Log {
 }
 
 #settings {
-    width: 44;
+    width: 36;
 }
 
 .w-full {

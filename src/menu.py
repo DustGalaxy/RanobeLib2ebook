@@ -54,6 +54,8 @@ class Ranobe2ebook(App):
     amount: int
     state: State = State()
     ebook: Handler = None
+    cd_error_link: int = 0
+    cd_error_dir: int = 0
 
     def __init__(
         self,
@@ -162,17 +164,27 @@ class Ranobe2ebook(App):
     @on(Input.Changed, "#input_link")
     def show_invalid_reasons(self, event: Input.Changed) -> None:
         if not event.validation_result.is_valid:
-            self.notify("Неправильная ссылка", severity="error", timeout=2)
+            if self.cd_error_link == 0:
+                self.notify("Неправильная ссылка", severity="error", timeout=2)
+                self.cd_error_link = 7
+            else:
+                self.cd_error_link -= 1
             self.query_one("#check_link").disabled = True
         else:
+            self.cd_error_link = 0
             self.query_one("#check_link").disabled = False
 
     @on(Input.Changed, "#input_save_dir")
     def show_dir(self, event: Input.Changed) -> None:
         if not event.validation_result.is_valid:
-            self.notify("Неправильный путь", severity="error", timeout=2)
+            if self.cd_error_dir == 0:
+                self.notify("Неправильный путь", severity="error", timeout=2)
+                self.cd_error_dir = 7
+            else:
+                self.cd_error_dir -= 1
             self.state.is_dir_selected = False
         else:
+            self.cd_error_dir = 0
             self.dir = event.value
             self.state.is_dir_selected = True
 
