@@ -75,21 +75,6 @@ class Ranobe2ebook(App):
         return all([i for i in self.state.__dict__.values()])
 
     def compose(self) -> ComposeResult:
-        gradient = Gradient.from_colors(
-            "#aa3355",
-            "#aa3355",
-            # "#aa3355",
-            # "#cc6666",
-            # "#ee9944",
-            # "#eedd00",
-            # "#99dd55",
-            # "#44dd88",
-            # "#22ccbb",
-            # "#00bbcc",
-            # "#0099cc",
-            # "#3366bb",
-            # "#663399",
-        )
         yield Header(show_clock=True, name="RanobeLIB 2 ebook")
         yield Footer()
         with Vertical():
@@ -99,7 +84,7 @@ class Ranobe2ebook(App):
                 placeholder="Сcылка на ранобе. Пример: https://ranobelib.me/ru/book/165329--kusuriya-no-hitorigoto-ln-novel",
                 validators=[Function(is_valid_url, "Неправильная ссылка!")],
             )
-            # yield Label("", id="url_errors", classes="w-full m1-2")
+
             with Horizontal(classes="m1-2"):
                 yield Button(
                     "Проверка ссылки",
@@ -118,11 +103,10 @@ class Ranobe2ebook(App):
                 # yield Button("Выход", id="stop_and_save", variant="error", classes="w-frame")
             yield ProgressBar(
                 id="download_progress",
-                gradient=gradient,
                 show_eta=False,
                 classes="w-full px-3",
             )
-            # yield Rule(line_style="heavy", classes="mx-0-2")
+
             with VerticalScroll():
                 with Horizontal():
                     with Vertical(id="settings", classes=" m1-2"):
@@ -151,9 +135,6 @@ class Ranobe2ebook(App):
                                 disabled=True,
                                 validators=[Function(os.path.isdir, "Invalid directory!")],
                             )
-                            # yield Label("", id="dir_errors", classes="w-frame mx-2")
-
-                    # yield Rule(orientation="vertical", line_style="heavy", classes="height-28")
                     with Vertical(classes="main-vertical-height w-frame"):
                         with Horizontal(classes=""):
                             yield Input(
@@ -184,7 +165,6 @@ class Ranobe2ebook(App):
             self.notify("Неправильная ссылка", severity="error", timeout=2)
             self.query_one("#check_link").disabled = True
         else:
-            # self.query_one("#url_errors").update("")
             self.query_one("#check_link").disabled = False
 
     @on(Input.Changed, "#input_save_dir")
@@ -337,11 +317,6 @@ class Ranobe2ebook(App):
     @work(name="fill_ebook_worker", exclusive=True, thread=True)
     async def fill_ebook_worker(self) -> None:
         log: Log = self.query_one("#log")
-
-        # for i in range(self.start, self.start + self.amount):
-        #     time.sleep(0.5)
-        #     log.write_line(str(i))
-
         try:
             self.ebook.fill_book(
                 self.slug, self.priority_branch, self.chapters_data[self.start : self.start + self.amount]
@@ -424,7 +399,6 @@ class Ranobe2ebook(App):
 
             case "save_dir":
                 self.dev_print(event.radio_set.pressed_button.label)
-                # self.query_one("#dir_errors").update("")
                 self.query_one("#input_save_dir").disabled = True
                 match event.radio_set.pressed_button.name:
                     case "desktop":
