@@ -5,6 +5,7 @@ from typing import Literal
 from urllib import parse
 from urllib.parse import urlparse
 
+import pyperclip
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.validation import Function
@@ -76,13 +77,16 @@ class Ranobe2ebook(App):
         yield Header(show_clock=True, name="RanobeLIB 2 ebook")
         yield Footer()
         with Vertical():
-            # yield Label(title)
-            yield Input(
-                id="input_link",
-                placeholder="Сcылка на ранобе. Пример: https://ranobelib.me/ru/book/165329--kusuriya-no-hitorigoto-ln-novel",
-                validators=[Function(is_valid_url, "Неправильная ссылка!")],
-            )
+            with Horizontal(classes="m1-2 aling-center-middle"):
+                yield Input(
+                    id="input_link",
+                    placeholder="Сcылка на ранобе. Пример: https://ranobelib.me/ru/book/165329--kusuriya-no-hitorigoto-ln-novel",
+                    validators=[Function(is_valid_url, "Неправильная ссылка!")],
+                    classes="w-frame",
+                )
 
+                yield Button("📋", id="paste_link", variant="primary", classes="mt-1")
+                yield Button("🧹", id="clear_link", variant="error", classes="mt-1")
             with Horizontal(classes="m1-2"):
                 yield Button(
                     "Проверка ссылки",
@@ -305,6 +309,18 @@ class Ranobe2ebook(App):
         self.query_one("#input_start").disabled = False
         self.query_one("#input_end").disabled = False
 
+    @on(Button.Pressed, "#clear_link")
+    def clear_link(self, event: Button.Pressed) -> None:
+        self.query_one("#input_link").value = ""
+
+    @on(Button.Pressed, "#paste_link")
+    def paste_link(self, event: Button.Pressed) -> None:
+        clipboard_content = pyperclip.paste()
+        if is_valid_url(clipboard_content):
+            self.query_one("#input_link").value = clipboard_content
+        else:
+            self.notify("Некоректная ссылка", severity="error", timeout=2)
+
     @work(name="make_ebook_worker", exclusive=True, thread=True)
     async def make_ebook_worker(self) -> None:
         log: Log = self.query_one("#log")
@@ -386,9 +402,7 @@ class Ranobe2ebook(App):
 
     @on(Button.Pressed, "#stop_and_save")
     def app_exit(self, event: Button.Pressed) -> None:
-        self.end_ebook_worker()  # TODO: сделать как пофиксят библеотеку
-
-        # self.app.exit()
+        self.end_ebook_worker()
 
     @on(Select.Changed, "#branch_list")
     def select_branch(self, event: Select.Changed) -> None:

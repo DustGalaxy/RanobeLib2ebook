@@ -51,6 +51,9 @@ Log {
 .mb-1 {
     margin: 0 0 1 0;
 }
+.mt-1 {
+    margin: 1 0 0 0;
+}
 .px-3 {
     padding: 0 3;
 }
@@ -76,12 +79,17 @@ Log {
 .w-full {
     width: 100%;
 }
+.w-5 {
+    width: 3;
+}
 .aling-center-middle {
     align: center middle;
 }
 .aling-center-top {
     align: center top;
 }
+
+
 .main-vertical-height {
     height: 34;
 }
