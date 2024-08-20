@@ -17,6 +17,6 @@
 ---
 
 Что бы выйти из програмы используйте сочетание клавиш ctrl + q
+![image](https://github.com/user-attachments/assets/399c01b2-541c-46b6-9822-596048d82ef2)
 
-![image](https://github.com/user-attachments/assets/a6ac5623-1d4d-47e1-be25-18b6a73cf1f2)
 
