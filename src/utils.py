@@ -1,8 +1,9 @@
 import re
-
-from FB2 import Author
-
+import base64
 from urllib.parse import urlparse
+
+import jwt
+from FB2 import Author
 
 
 def is_url(url) -> bool:
@@ -23,6 +24,25 @@ def set_authors(authors) -> list:
         )
 
     return result_list
+
+
+def is_jwt(token) -> bool:
+    parts = token.split(".")
+    if len(parts) != 3:
+        return False
+
+    try:
+        header = base64.urlsafe_b64decode(parts[0] + "==").decode("utf-8")
+        payload = base64.urlsafe_b64decode(parts[1] + "==").decode("utf-8")
+    except (ValueError, base64.binascii.Error):
+        return False
+
+    try:
+        jwt.decode(token, options={"verify_signature": False})
+    except jwt.DecodeError:
+        return False
+
+    return True
 
 
 def is_html(text) -> bool:

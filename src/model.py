@@ -58,6 +58,11 @@ class Exception:
     message: str
 
 
+@dataclass
+class Config:
+    token: str = ""
+
+
 class Handler(ABC):
     log_func: Callable
     progress_bar_step: Callable

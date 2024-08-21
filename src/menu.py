@@ -28,8 +28,10 @@ from textual.widgets import (
 
 from textual_fspicker import SelectDirectory
 
+from src.config import config
 from src.model import ChapterMeta, Handler, State
 from src.api import get_branchs, get_chapters_data, get_ranobe_data
+from src.utils import is_jwt
 
 title = r"""
      ____                   _          _     ___ ____    ____         _                 _    
@@ -87,6 +89,7 @@ class Ranobe2ebook(App):
 
                 yield Button("📋", id="paste_link", variant="primary", classes="mt-1")
                 yield Button("🧹", id="clear_link", variant="error", classes="mt-1")
+                yield Button("🔐", id="paste_token", variant="primary", classes="mt-1")
             with Horizontal(classes="m1-2"):
                 yield Button(
                     "Проверка ссылки",
@@ -246,6 +249,8 @@ class Ranobe2ebook(App):
         self.ranobe_data = get_ranobe_data(self.slug)
         if self.ranobe_data is None:
             log.write_line("Не удалось получить данные о ранобе.")
+            log.write_line("Либо такого ранобє нету, либо для него требуется авторизация.")
+            log.write_line("Если вы уже авторизовивались, сделайте это еще раз.")
             return
         log.write_line("Получили данные о ранобе.")
 
@@ -308,6 +313,17 @@ class Ranobe2ebook(App):
         self.query_one("#download").disabled = False
         self.query_one("#input_start").disabled = False
         self.query_one("#input_end").disabled = False
+
+    @on(Button.Pressed, "#paste_token")
+    def paste_token(self, event: Button.Pressed) -> None:
+        token = pyperclip.paste()
+        if not is_jwt(token):
+            self.notify("Некоректный токен", severity="error", timeout=2)
+            return
+        config.token = token
+        event.button.variant = "success"  # success("🔓")
+        event.button.label = "🔓"
+        self.notify("Токен скопирован", timeout=2)
 
     @on(Button.Pressed, "#clear_link")
     def clear_link(self, event: Button.Pressed) -> None:

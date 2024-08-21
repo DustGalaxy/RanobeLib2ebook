@@ -5,6 +5,7 @@ import PIL
 import cloudscraper
 import requests
 
+from src.config import config
 from src.model import Attachment, ChapterData, ChapterMeta
 from src.utils import is_html, is_url
 
@@ -36,7 +37,10 @@ def get_ranobe_data(name: str) -> dict:
             ]
         ]
     )
-    response = requests.get(url)
+    response = requests.get(
+        url,
+        headers={"Authorization": f"Bearer {config.token}"},
+    )
     if response.status_code != 200:
         return None
 
@@ -46,7 +50,10 @@ def get_ranobe_data(name: str) -> dict:
 def get_chapters_data(name: str) -> list[ChapterMeta]:
     url = f"https://api.lib.social/api/manga/{name}/chapters"
 
-    response = requests.get(url)
+    response = requests.get(
+        url,
+        headers={"Authorization": f"Bearer {config.token}"},
+    )
     if response.status_code != 200:
         return None
     chapters = [
@@ -98,7 +105,12 @@ def get_image_content(url: str, format: str) -> bytes:
 
 def get_chapter(name: str, priority_branch: str, number: int, volume: int) -> ChapterData:
     url = f"https://api.lib.social/api/manga/{name}/chapter?branch_id={priority_branch}&number={number}&volume={volume}"
-    response = requests.get(url)
+    response = requests.get(
+        url,
+        headers={
+            "Authorization": f"Bearer {config.token}",
+        },
+    )
     if response.status_code != 200:
         raise Exception(f"Ошибка при получении главы {volume} - {number}. Пропускаем главу {volume} - {number}")
 
