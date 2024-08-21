@@ -89,7 +89,7 @@ class Ranobe2ebook(App):
 
                 yield Button("📋", id="paste_link", variant="primary", classes="mt-1")
                 yield Button("🧹", id="clear_link", variant="error", classes="mt-1")
-                yield Button("🔐", id="paste_token", variant="primary", classes="mt-1")
+                yield Button("🔐", id="paste_token", variant="warning", classes="mt-1")
             with Horizontal(classes="m1-2"):
                 yield Button(
                     "Проверка ссылки",
