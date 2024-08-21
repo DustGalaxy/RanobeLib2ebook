@@ -2,7 +2,6 @@ import os
 import re
 from pathlib import Path
 from typing import Literal
-from urllib import parse
 from urllib.parse import urlparse
 
 import pyperclip
@@ -31,7 +30,7 @@ from textual_fspicker import SelectDirectory
 from src.config import config
 from src.model import ChapterMeta, Handler, State
 from src.api import get_branchs, get_chapters_data, get_ranobe_data
-from src.utils import is_jwt
+from src.utils import is_jwt, is_valid_url
 
 title = r"""
      ____                   _          _     ___ ____    ____         _                 _    
@@ -72,9 +71,6 @@ class Ranobe2ebook(App):
         # self.query_one("#dev_label").update(text)
         pass
 
-    def is_ready_download(self) -> bool:
-        return all([i for i in self.state.__dict__.values()])
-
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True, name="RanobeLIB 2 ebook")
         yield Footer()
@@ -105,7 +101,9 @@ class Ranobe2ebook(App):
                     variant="success",
                     classes="w-frame",
                 )
-                yield Button("Отстановить и сохранить", id="stop_and_save", variant="error", classes="w-frame")
+                yield Button(
+                    "Отстановить и сохранить", id="stop_and_save", variant="error", disabled=True, classes="w-frame"
+                )
             yield ProgressBar(
                 id="download_progress",
                 show_eta=False,
@@ -242,7 +240,7 @@ class Ranobe2ebook(App):
         self.dev_print("Check link")
         self.clear_all()
 
-        url = parse.urlparse(self.query_one("#input_link").value)
+        url = urlparse(self.query_one("#input_link").value)
         self.slug = url.path.split("/")[-1]
 
         log.write_line("Получаем данные о ранобе...")
@@ -328,12 +326,14 @@ class Ranobe2ebook(App):
     @on(Button.Pressed, "#clear_link")
     def clear_link(self, event: Button.Pressed) -> None:
         self.query_one("#input_link").value = ""
+        self.notify("Ссылка очищенна", timeout=2)
 
     @on(Button.Pressed, "#paste_link")
     def paste_link(self, event: Button.Pressed) -> None:
         clipboard_content = pyperclip.paste()
         if is_valid_url(clipboard_content):
             self.query_one("#input_link").value = clipboard_content
+            self.notify("Ссылка вставленна", timeout=2)
         else:
             self.notify("Некоректная ссылка", severity="error", timeout=2)
 
@@ -357,6 +357,7 @@ class Ranobe2ebook(App):
     @work(name="fill_ebook_worker", exclusive=True, thread=True)
     async def fill_ebook_worker(self) -> None:
         log: Log = self.query_one("#log")
+        self.query_one("#stop_and_save").disabled = False
         try:
             worker = get_current_worker()
             self.ebook.fill_book(
@@ -369,7 +370,7 @@ class Ranobe2ebook(App):
     @work(name="end_ebook_worker", exclusive=True, thread=True)
     async def end_ebook_worker(self) -> None:
         log: Log = self.query_one("#log")
-
+        self.query_one("#stop_and_save").disabled = True
         try:
             self.ebook.end_book()
 
@@ -405,7 +406,7 @@ class Ranobe2ebook(App):
 
     @on(Button.Pressed, "#download")
     def download(self, event: Button.Pressed) -> None:
-        if self.is_ready_download() and self.dir:
+        if all([i for i in self.state.__dict__.values()]) and self.dir:
             self.dev_print("Download")
             self.query_one("#download").disabled = True
             self.query_one("#check_link").disabled = True
@@ -476,13 +477,3 @@ class Ranobe2ebook(App):
         self.query_one("#branch_list").set_options([])
         self.query_one("#input_start").clear()
         self.query_one("#input_end").clear()
-
-
-def is_valid_url(url) -> bool:
-    parsed = urlparse(url)
-
-    if all([parsed.scheme == "https", parsed.netloc == "ranobelib.me", parsed.path]):
-        pattern = re.compile(r"^/ru/book/.*")
-        return bool(pattern.match(parsed.path))
-
-    return False

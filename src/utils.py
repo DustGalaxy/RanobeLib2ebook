@@ -2,7 +2,7 @@ import re
 import base64
 from urllib.parse import urlparse
 
-import jwt
+from jwt import decode, DecodeError
 from FB2 import Author
 
 
@@ -14,7 +14,7 @@ def is_url(url) -> bool:
         return False
 
 
-def set_authors(authors) -> list:
+def set_authors(authors) -> list[Author]:
     result_list = []
     for author in authors:
         result_list.append(
@@ -32,14 +32,14 @@ def is_jwt(token) -> bool:
         return False
 
     try:
-        header = base64.urlsafe_b64decode(parts[0] + "==").decode("utf-8")
-        payload = base64.urlsafe_b64decode(parts[1] + "==").decode("utf-8")
+        base64.urlsafe_b64decode(parts[0] + "==").decode("utf-8")
+        base64.urlsafe_b64decode(parts[1] + "==").decode("utf-8")
     except (ValueError, base64.binascii.Error):
         return False
 
     try:
-        jwt.decode(token, options={"verify_signature": False})
-    except jwt.DecodeError:
+        decode(token, options={"verify_signature": False})
+    except DecodeError:
         return False
 
     return True
@@ -87,10 +87,19 @@ def is_html(text) -> bool:
         "hr",
     }
 
-    # Проверка, есть ли в найденных тегах известные HTML-теги
     for tag in tags:
         tag_name = tag.split()[0].strip("/")
         if tag_name.lower() in known_html_tags:
             return True
+
+    return False
+
+
+def is_valid_url(url) -> bool:
+    parsed = urlparse(url)
+
+    if all([parsed.scheme == "https", parsed.netloc == "ranobelib.me", parsed.path]):
+        pattern = re.compile(r"^/ru/book/.*")
+        return bool(pattern.match(parsed.path))
 
     return False
