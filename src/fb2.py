@@ -22,7 +22,7 @@ class FB2Handler(Handler):
         try:
             soup = BeautifulSoup(chapter.content, "html.parser")
             tags: list = []
-            for tag in soup.find_all(True):
+            for tag in soup.find_all(recursive=False):
                 tags.append(ET.fromstring(tag.__str__()))
         except Exception as e:
             self.log_func(e)

@@ -1,3 +1,4 @@
+#  import argparse
 import traceback
 import os
 from pathlib import Path
@@ -7,6 +8,13 @@ from src.fb2 import FB2Handler
 from src.epub import EpubHandler
 
 if __name__ == "__main__":
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument("--test", type=str, default=None)
+    # args = parser.parse_args()
+
+    # if args.test:
+    #     print("Запущен скрипт с включенной детализацией")
+
     doc_path = os.path.normpath(os.path.expanduser("~/Documents"))
     logs_dir = f"{doc_path}\\ranobelib-parser-logs"
     Path(f"{logs_dir}").mkdir(parents=True, exist_ok=True)

@@ -22,7 +22,7 @@ class EpubHandler(Handler):
             soup = BeautifulSoup(chapter.content, "html.parser")
             tags: list = []
             images: dict[str, Image] = {}
-            for tag in soup.find_all(True):
+            for tag in soup.find_all(recursive=False):
                 if tag.name == "img":
                     url = tag["src"]
                     img_filename = url.split("/")[-1]
@@ -35,6 +35,7 @@ class EpubHandler(Handler):
                     )
                     images[image.name] = image
                     tag["src"] = image.static_url
+
                 tags.append(tag)
         except Exception as e:
             self.log_func(e)

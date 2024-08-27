@@ -1,5 +1,4 @@
 import os
-import re
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlparse
@@ -74,6 +73,7 @@ class Ranobe2ebook(App):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True, name="RanobeLIB 2 ebook")
         yield Footer()
+
         with Vertical():
             with Horizontal(classes="m1-2 aling-center-middle"):
                 yield Input(
@@ -418,11 +418,11 @@ class Ranobe2ebook(App):
             self.dev_print(str([(i, j) for i, j in self.state.__dict__.items()]))
 
     @on(Button.Pressed, "#stop_and_save")
-    def app_exit(self, event: Button.Pressed) -> None:
+    def stop_and_save(self, event: Button.Pressed) -> None:
         self.end_ebook_worker()
 
     @on(Select.Changed, "#branch_list")
-    def select_branch(self, event: Select.Changed) -> None:
+    def branch_list(self, event: Select.Changed) -> None:
         if event.select.value != Select.BLANK:
             self.state.is_branch_selected = True
             self.priority_branch = event.select.value
@@ -431,13 +431,6 @@ class Ranobe2ebook(App):
     @on(RadioSet.Changed)
     def set_option(self, event: RadioSet.Changed) -> None:
         match event.radio_set.id:
-            case "format":
-                match event.radio_set.pressed_button.name:
-                    case "epub":
-                        self.dev_print("EPUB")
-                    case "fb2":
-                        self.dev_print("FB2")
-
             case "save_dir":
                 self.dev_print(event.radio_set.pressed_button.label)
                 self.query_one("#input_save_dir").disabled = True
